@@ -1,0 +1,37 @@
+{
+  "overview": "This PR establishes the complete Supabase/PostgreSQL data layer for edtNutriTrack. It ships the initial migration SQL (all 7 tables + RLS policies + triggers), seed nutrition data, the typed TypeScript Supabase client with env validation, and environment variable config files.",
+  "summary_json": {
+    "Tables created": "users, user_goals, foods, meals, meal_items, weight_log, food_images",
+    "Security": "RLS policies ensure users access only their own rows; service role bypasses RLS for seed data",
+    "Trigger": "set_updated_at() function applied to tables needing updated_at automation",
+    "Env vars required": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY, NEXTAUTH_SECRET, NEXTAUTH_URL",
+    "Client startup behavior": "lib/supabase.ts throws at startup if NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY are missing",
+    "Seed data": "Pre-verified foods (proteins, grains, vegetables, etc.) inserted per 100g with is_verified=TRUE via service role",
+    "Migration apply method": "Supabase dashboard SQL editor or `supabase db push`",
+    "Breaking changes": "None; foundational layer with no prior schema"
+  },
+  "files_changed": [
+    {
+      "path": "supabase/migrations/001_initial_schema.sql",
+      "summary": "Defines all 7 tables with constraints, foreign keys, RLS policies, and the set_updated_at trigger function for the edtNutriTrack schema."
+    },
+    {
+      "path": "supabase/seed.sql",
+      "summary": "Inserts verified baseline nutrition records into public.foods (per-100g macros) to be run after the initial migration."
+    },
+    {
+      "path": "lib/supabase.ts",
+      "summary": "Typed Supabase client with Row types mirroring each table and fail-fast env validation on startup."
+    },
+    {
+      "path": ".env.local",
+      "summary": "Local environment file template with placeholder values for Supabase, OpenAI, and NextAuth variables (not committed)."
+    },
+    {
+      "path": ".env.example",
+      "summary": "Documented reference for all required environment variables with instructions on where to find each value."
+    }
+  ],
+  "extras": "Verify: run migration via `supabase db push`, then execute seed.sql with service role key. Confirm RLS blocks cross-user queries with anon key. Risk: .env.local contains placeholder secrets — ensure it is gitignored before merging.",
+  "fallback_text": "PR #1 sets up the entire Supabase data layer for edtNutriTrack. The migration creates 7 tables (users, user_goals, foods, meals, meal_items, weight_log, food_images) with RLS policies, a set_updated_at trigger, and proper FK relationships to auth.users. Seed data provides verified baseline foods. lib/supabase.ts exports a typed client and throws at startup if NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY are absent. Environment config is documented in .env.example; .env.local holds local placeholders and must not be committed. No breaking changes — this is the foundational layer all other features will build on."
+}
