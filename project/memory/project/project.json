@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "cofabric.memory.project.v2",
+  "name": "edtNutriTrack",
+  "oneLineDescription": "AI-powered nutrition tracking application that simplifies meal logging through photo recognition and provides dietary insights",
+  "whatItIs": "NutriTrack is an AI-powered nutrition tracking application designed to help users easily log meals, understand their dietary habits, and improve overall health. The product focuses on speed, simplicity, and intelligent automation to reduce the friction typically associated with food tracking.",
+  "stack": [
+    {
+      "name": "next",
+      "version": "^14.0.0",
+      "purpose": "React framework"
+    },
+    {
+      "name": "react",
+      "version": "^18.0.0",
+      "purpose": "UI library"
+    },
+    {
+      "name": "@supabase/supabase-js",
+      "version": "^2.38.0",
+      "purpose": "database and auth"
+    },
+    {
+      "name": "openai",
+      "version": "^4.20.0",
+      "purpose": "AI food recognition"
+    }
+  ],
+  "externalIntegrations": [
+    {
+      "service": "Supabase",
+      "envVars": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "clientLocation": null
+    },
+    {
+      "service": "OpenAI",
+      "envVars": [
+        "OPENAI_API_KEY"
+      ],
+      "clientLocation": null
+    },
+    {
+      "service": "NextAuth",
+      "envVars": [
+        "NEXTAUTH_SECRET",
+        "NEXTAUTH_URL"
+      ],
+      "clientLocation": null
+    }
+  ],
+  "coreUserFlows": [
+    "User signs up/logs in and sets basic goals (weight, target calories)",
+    "User logs a meal through manual entry or AI photo recognition",
+    "User views updated nutrition summary on daily dashboard",
+    "User receives basic feedback and insights on dietary habits"
+  ],
+  "outOfScope": [
+    "Full meal planning",
+    "Advanced analytics",
+    "Wearable integrations",
+    "Social/community features"
+  ],
+  "dataModel": [],
+  "crossCuttingPrinciples": [
+    "Mobile-first approach using React Native design patterns",
+    "Speed and simplicity to reduce friction in food tracking",
+    "AI automation to minimize manual input requirements",
+    "Free tier with limited AI usage, premium tier with unlimited AI features"
+  ],
+  "specSummary": "NutriTrack is an AI-powered nutrition tracking application that addresses the common friction points in traditional food logging by emphasizing speed, simplicity, and intelligent automation. The product targets individuals seeking weight management, fitness enthusiasts tracking macros, busy users wanting low-effort logging, and nutrition beginners needing guidance. Core functionality centers around meal logging through both manual entry and AI-powered photo recognition, comprehensive nutrition tracking including calories and macronutrients, customizable goals and progress visualization, and personalized insights with habit detection. The AI capabilities include food recognition from images, calorie and macro estimation, and personalized feedback, with future plans for automated meal planning. The monetization strategy employs a freemium model where basic manual logging and limited AI usage are free, while a premium tier ($8-12/month) offers unlimited AI photo logging, advanced insights, and meal recommendations. The MVP scope focuses on user authentication, manual meal logging, basic calorie tracking, a simple dashboard, and one core AI feature, deliberately excluding advanced features like full meal planning, detailed analytics, wearable integrations, and social features for post-MVP development. The technical architecture emphasizes a mobile-first approach while maintaining web accessibility."
+}
