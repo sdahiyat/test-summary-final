@@ -1,5 +1,5 @@
 {
-  "name": "edtnutritrack",
+  "name": "nutritrack",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,16 +8,19 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "supabase db push",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "seed:foods": "ts-node --project tsconfig.scripts.json scripts/seed-foods.ts",
+    "seed": "npm run seed:foods"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
     "next": "14.0.0",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.0.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
@@ -26,6 +29,7 @@
     "postcss": "^8",
     "supabase": "^1.136.0",
     "tailwindcss": "^3.3.0",
+    "ts-node": "^10.9.1",
     "typescript": "^5"
   }
 }
