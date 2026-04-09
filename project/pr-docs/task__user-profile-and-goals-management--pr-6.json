@@ -1,0 +1,53 @@
+{
+  "overview": "This PR implements the full user profile and goals management system, including a multi-step onboarding wizard for new users and a profile settings page for existing users. It captures personal biometrics, goal type, target weight, and daily calorie/macro targets with full form validation. Suggested calorie and macro targets are calculated server-side using the Mifflin-St Jeor BMR formula adjusted for activity level and goal type.",
+  "summary_json": {
+    "New API routes": "GET/PUT /api/profile, GET/PUT /api/goals, POST /api/profile/suggestions",
+    "Goal types supported": "weight_loss, maintenance, muscle_gain",
+    "Activity levels": "sedentary, light, moderate, active, very_active",
+    "Validation ranges": "age 13–120, height 50–300 cm, weight 20–500 kg, calories 800–10000",
+    "BMR method": "Mifflin-St Jeor (sex-adjusted), multiplied by activity factor for TDEE",
+    "Required DB migration": "ALTER TABLE users ADD COLUMNS: full_name, age, height_cm, weight_kg, sex, activity_level, onboarding_completed, updated_at; ALTER TABLE user_goals ADD updated_at; optionally add UNIQUE(user_id) constraint",
+    "Breaking changes": "None; new columns use IF NOT EXISTS and defaults",
+    "Onboarding steps": "Personal Info → Body Metrics → Your Goals → Review"
+  },
+  "files_changed": [
+    {
+      "path": "src/lib/validations/profile.ts",
+      "summary": "Defines VALIDATION_RULES constants and exports validateProfile/validateGoals functions with field-level error maps."
+    },
+    {
+      "path": "src/lib/nutrition-calculator.ts",
+      "summary": "Implements BMR (Mifflin-St Jeor), TDEE, and macro target calculations given user biometrics and goal type."
+    },
+    {
+      "path": "src/app/api/profile/route.ts",
+      "summary": "GET/PUT route for reading and upserting user profile rows in Supabase; includes required SQL migration comment."
+    },
+    {
+      "path": "src/app/api/goals/route.ts",
+      "summary": "GET/PUT route for fetching and upserting user_goals rows, with session auth guard."
+    },
+    {
+      "path": "src/app/api/profile/suggestions/route.ts",
+      "summary": "POST endpoint that accepts biometrics + goal type and returns calculated calorie/macro suggestions without persisting data."
+    },
+    {
+      "path": "src/hooks/useProfile.ts",
+      "summary": "Client hook that fetches profile and goals in parallel, exposes save helpers, and tracks loading/saving/error state."
+    },
+    {
+      "path": "src/components/onboarding/StepIndicator.tsx",
+      "summary": "Visual step progress indicator component with completed/active/pending states for the onboarding wizard."
+    },
+    {
+      "path": "src/components/onboarding/OnboardingWizard.tsx",
+      "summary": "Four-step onboarding wizard collecting personal info, body metrics, goals, and a review screen before submission."
+    },
+    {
+      "path": "src/components/profile/ProfileForm.tsx",
+      "summary": "Profile settings form for existing users to update biometrics and goals post-onboarding."
+    }
+  ],
+  "extras": "Run the SQL migration in the Supabase SQL editor before deploying (see comment block in src/app/api/profile/route.ts). Verify user_goals has a UNIQUE(user_id) constraint or the PUT upsert may error. Follow-up: add server-side macro suggestion call on goal save; nutrition-calculator import is currently commented out in goals/route.ts.",
+  "fallback_text": "PR #6 adds a complete user profile and goals management feature. Nine files were added or modified. A validation library (profile.ts) enforces bounds on age, height, weight, and calories. A nutrition calculator (nutrition-calculator.ts) computes BMR via Mifflin-St Jeor and derives TDEE and per-macro targets for three goal types. Three API routes cover profile CRUD, goals CRUD, and a stateless calorie suggestion endpoint. A useProfile React hook wires the APIs to client state. UI consists of a four-step OnboardingWizard with a StepIndicator and a ProfileForm for settings updates. A required Supabase migration adds new columns to the users and user_goals tables; the SQL is embedded as a comment in the profile route file."
+}
