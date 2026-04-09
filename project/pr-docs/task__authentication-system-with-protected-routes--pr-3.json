@@ -1,0 +1,62 @@
+{
+  "overview": "Implements a complete Supabase Auth-based authentication system for the Next.js app. Covers signup, login, logout, forgot/reset password, email verification, and session management. Next.js middleware enforces route protection, redirecting unauthenticated users to login and authenticated users away from auth pages.",
+  "summary_json": {
+    "Auth provider": "Supabase Auth via @supabase/auth-helpers-nextjs",
+    "Protected routes": "/dashboard, /log, /profile, /reports, /goals",
+    "Auth pages": "/auth/login, /auth/signup, /auth/forgot-password, /auth/reset-password, /auth/verify-email",
+    "Auth callback route": "/auth/callback (GET) — exchanges code for session, redirects to /dashboard",
+    "Required env vars": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "Client entry point": "src/lib/supabase.ts (createClientComponentClient)",
+    "Server entry point": "src/lib/supabase-server.ts (createServerComponentClient, createRouteHandlerClient)",
+    "Context/hook": "AuthContext.tsx exports AuthProvider and useAuth with signIn, signUp, signOut, resetPassword",
+    "Breaking changes": "None; additive feature"
+  },
+  "files_changed": [
+    {
+      "path": "src/lib/supabase.ts",
+      "summary": "Creates and exports the Supabase client-component client, requiring NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    },
+    {
+      "path": "src/lib/supabase-server.ts",
+      "summary": "Exports server-side Supabase helpers for Server Components and Route Handlers using Next.js cookies."
+    },
+    {
+      "path": "src/contexts/AuthContext.tsx",
+      "summary": "Provides AuthContext and useAuth hook with session state, signIn, signUp, signOut, and resetPassword methods for client components."
+    },
+    {
+      "path": "src/app/auth/layout.tsx",
+      "summary": "Shared centered layout wrapper for all auth pages."
+    },
+    {
+      "path": "src/app/auth/login/page.tsx",
+      "summary": "Login form page; redirects authenticated users to /dashboard and handles sign-in errors."
+    },
+    {
+      "path": "src/app/auth/signup/page.tsx",
+      "summary": "Signup form with full-name, email, password confirmation, and length validation; shows email verification prompt on success."
+    },
+    {
+      "path": "src/app/auth/forgot-password/page.tsx",
+      "summary": "Forgot-password form that triggers a Supabase password reset email and shows a confirmation state."
+    },
+    {
+      "path": "src/app/auth/callback/route.ts",
+      "summary": "Route handler that exchanges the Supabase auth code for a session and redirects to /dashboard or login on failure."
+    },
+    {
+      "path": "src/app/auth/reset-password/page.tsx",
+      "summary": "Password reset form gated on the PASSWORD_RECOVERY auth event before allowing updateUser calls."
+    },
+    {
+      "path": "src/app/auth/verify-email/page.tsx",
+      "summary": "Email verification landing page with a resend button using supabase.auth.resend for signup confirmation."
+    },
+    {
+      "path": "src/middleware.ts",
+      "summary": "Next.js middleware that refreshes the session cookie and enforces redirects for protected and auth-only routes."
+    }
+  ],
+  "extras": "Verify: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, enable email auth in Supabase dashboard, and configure the redirect URL to /auth/callback. Follow-up: some files were omitted due to cap (started skipping at index 11) — confirm no additional route handlers or type files were added.",
+  "fallback_text": "This PR adds a full Supabase authentication system to the Next.js app. A client Supabase helper (supabase.ts) and server helpers (supabase-server.ts) are introduced. AuthContext.tsx provides a React context and useAuth hook exposing session, user, loading, signIn, signUp, signOut, and resetPassword. Auth UI pages cover login, signup, forgot-password, reset-password, and verify-email, all wrapped in a shared centered layout. An /auth/callback route handler exchanges the OAuth/magic-link code for a session. Next.js middleware (middleware.ts) refreshes the session cookie on every request and redirects unauthenticated users hitting /dashboard, /log, /profile, /reports, or /goals to /auth/login, while redirecting already-authenticated users away from /auth/* to /dashboard. Required env vars: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+}
