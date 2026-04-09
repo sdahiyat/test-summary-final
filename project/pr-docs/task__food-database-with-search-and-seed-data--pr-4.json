@@ -1,0 +1,47 @@
+{
+  "overview": "This PR establishes the food database layer for NutriTrack: a large seed dataset (200+ foods with serving-size variants), two REST API endpoints for listing and searching foods, and supporting TypeScript types and tooling. The search endpoint supports partial matching with relevance ranking (exact → starts-with → word-starts-with) and paginated results.",
+  "summary_json": {
+    "New API routes": "GET /api/foods (paginated list, category filter), GET /api/foods/search (partial-match search with relevance ranking)",
+    "Seed data": "200+ food entries across 13 categories with per-serving and 100g variants; run via `npm run seed:foods`",
+    "Required env vars": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY",
+    "New npm scripts": "seed:foods, seed",
+    "Food categories": "fruits, vegetables, proteins, dairy, grains, legumes, nuts, beverages, snacks, fast_food, condiments, prepared, seafood",
+    "Pagination defaults": "page=1, limit=20, max limit=50"
+  },
+  "files_changed": [
+    {
+      "path": "src/types/food.ts",
+      "summary": "Defines Food, FoodSearchParams, FoodSearchResponse interfaces and FoodCategory union type used across the feature."
+    },
+    {
+      "path": "src/data/foods-seed.ts",
+      "summary": "Large static array of 200+ SeedFood entries with accurate nutritional data and multiple serving-size variants per food."
+    },
+    {
+      "path": "scripts/seed-foods.ts",
+      "summary": "CLI script that batch-inserts (50 at a time) seed foods into Supabase using the service-role key."
+    },
+    {
+      "path": "tsconfig.scripts.json",
+      "summary": "Separate tsconfig extending the base config for compiling seed scripts with CommonJS/ES2017 targeting."
+    },
+    {
+      "path": "src/app/api/foods/search/route.ts",
+      "summary": "Next.js route handler for GET /api/foods/search with ilike partial matching, pagination, and client-side relevance re-ranking."
+    },
+    {
+      "path": "src/app/api/foods/route.ts",
+      "summary": "Next.js route handler for GET /api/foods supporting pagination and optional category filtering against the foods table."
+    },
+    {
+      "path": "src/lib/supabase.ts",
+      "summary": "Shared Supabase client module exposing both anon and admin (service-role) client factories with env-var guards."
+    },
+    {
+      "path": "package.json",
+      "summary": "Adds ts-node and dotenv dependencies plus seed:foods and seed npm scripts to support running the seed CLI."
+    }
+  ],
+  "extras": "To verify: run `npm run seed:foods` with all three env vars set, then hit GET /api/foods?limit=5 and GET /api/foods/search?q=apple. Follow-up risk: search route creates a new Supabase client per request instead of reusing the shared singleton from src/lib/supabase.ts — consider consolidating.",
+  "fallback_text": "PR #4 adds a full food database foundation to NutriTrack. It introduces a 200+ item seed dataset (src/data/foods-seed.ts) covering 13 food categories with per-serving and 100g variants, plus a CLI seed script (scripts/seed-foods.ts) runnable via `npm run seed:foods`. Two new Next.js API routes are added: GET /api/foods for paginated, category-filtered listing and GET /api/foods/search for partial-match search with relevance ranking. TypeScript types for Food, search params, and response shapes live in src/types/food.ts. A shared Supabase client module (src/lib/supabase.ts) provides both anon and admin client factories. Requires NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY env vars."
+}
