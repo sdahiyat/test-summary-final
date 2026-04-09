@@ -1,0 +1,45 @@
+{
+  "overview": "This PR establishes the AI photo logging infrastructure: a typed OpenAI client (gpt-4o vision), a reusable food image analysis service, and Supabase Storage integration for image uploads. A new POST /api/upload route handles multipart uploads with sharp-based resizing, MIME validation, and automatic bucket provisioning. Together these form the foundation for AI-driven food recognition and calorie logging.",
+  "summary_json": {
+    "New API route": "POST /api/upload",
+    "Vision model": "gpt-4o (VISION_MODEL constant in lib/openai.ts)",
+    "Storage backend": "Supabase Storage, bucket: food-images",
+    "Max upload size": "10 MB",
+    "Allowed MIME types": "image/jpeg, image/png, image/webp, image/heic, image/gif",
+    "Required env vars": "OPENAI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY",
+    "New dependencies": "openai ^4.20.0, sharp ^0.33.0",
+    "Breaking changes": "None; additive only"
+  },
+  "files_changed": [
+    {
+      "path": "lib/openai.ts",
+      "summary": "Creates and exports the OpenAI client, VISION_MODEL constant, FoodItem/FoodAnalysisResult interfaces, and the structured vision prompt builder."
+    },
+    {
+      "path": "lib/imageAnalysis.ts",
+      "summary": "Implements analyzeFoodImage(), calling the OpenAI vision API and parsing/validating the structured JSON nutrition response, with a typed ImageAnalysisError."
+    },
+    {
+      "path": "lib/supabaseStorage.ts",
+      "summary": "Provides ensureFoodImagesBucket() to auto-create the 'food-images' Supabase Storage bucket with size/MIME limits if it doesn't exist."
+    },
+    {
+      "path": "lib/supabase.ts",
+      "summary": "Exports both anon and service-role Supabase clients and re-exports shared DB types from supabase.types.ts."
+    },
+    {
+      "path": "src/app/api/upload/route.ts",
+      "summary": "POST handler that validates, sharp-resizes, and uploads food images to Supabase Storage, returning a secure public URL."
+    },
+    {
+      "path": "lib/supabase.types.ts",
+      "summary": "Defines shared TypeScript types and row interfaces (MealType, FoodRow, MealRow, etc.) for Supabase table shapes."
+    },
+    {
+      "path": "package.json",
+      "summary": "Adds openai and sharp as runtime dependencies to support vision API calls and server-side image processing."
+    }
+  ],
+  "extras": "Verify: set all four env vars in .env.local, then POST a test image to /api/upload and confirm a public URL is returned; call analyzeFoodImage() with that URL and check the parsed FoodAnalysisResult. Follow-up risks: sharp may need native binaries in the deployment environment (e.g., Vercel — confirm sharp is compatible with the target runtime); service role key is used server-side only — ensure it is never exposed to the client bundle.",
+  "fallback_text": "PR #5 adds the full AI photo logging backend. lib/openai.ts sets up a typed OpenAI client using gpt-4o with a structured nutrition-analysis prompt. lib/imageAnalysis.ts wraps the vision API call, parses JSON output into FoodAnalysisResult, and surfaces typed errors. lib/supabaseStorage.ts auto-provisions the 'food-images' Supabase Storage bucket. lib/supabase.ts exports anon and admin Supabase clients plus re-exported DB types from lib/supabase.types.ts. src/app/api/upload/route.ts is a new POST endpoint that accepts multipart image data, validates MIME type and size (10 MB cap), resizes via sharp, and stores the result in Supabase Storage. package.json gains openai and sharp as runtime deps. Required env vars: OPENAI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. No breaking changes; fully additive."
+}
