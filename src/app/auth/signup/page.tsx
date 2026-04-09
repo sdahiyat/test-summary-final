@@ -1,179 +1,174 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function SignupPage() {
-  const { signUp, session, loading } = useAuth();
   const router = useRouter();
+  const supabase = createClientComponentClient();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    if (!loading && session) {
-      router.push('/dashboard');
-    }
-  }, [session, loading, router]);
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+    if (!fullName.trim() || fullName.trim().length < 2) {
+      setError('Please enter your full name (at least 2 characters)');
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError('Password must be at least 8 characters');
       return;
     }
 
-    setIsSubmitting(true);
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
 
-    const { error } = await signUp(email, password, fullName);
+    setLoading(true);
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      setError(error.message);
-      setIsSubmitting(false);
-    } else {
-      setSuccess(true);
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      setEmailSent(true);
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  if (emailSent) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="text-5xl mb-4">📧</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Check your email</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            We sent a confirmation link to <strong>{email}</strong>. Please verify your account
-            before signing in.
-          </p>
-          <Link
-            href="/auth/login"
-            className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors text-sm"
-          >
-            Back to Login
-          </Link>
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+          <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
         </div>
+        <h2 className="text-xl font-bold text-gray-900">Check your email</h2>
+        <p className="text-gray-500 text-sm">
+          We sent a verification link to <strong>{email}</strong>. Click the link to activate your account and you'll be taken to set up your profile.
+        </p>
+        <Link
+          href="/auth/login"
+          className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+        >
+          Back to login
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-green-600">NutriTrack</h1>
-          <p className="text-gray-500 mt-1 text-sm">Create your account</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+        <p className="text-gray-500 text-sm mt-1">Start tracking your nutrition today</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            placeholder="Jane Smith"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-              Full name
-            </label>
-            <input
-              id="fullName"
-              type="text"
-              autoComplete="name"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-              placeholder="Jane Doe"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="you@example.com"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-              placeholder="you@example.com"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="At least 8 characters"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-              placeholder="Min. 8 characters"
-            />
-            <p className="text-xs text-gray-400 mt-1">Use at least 8 characters for a strong password.</p>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            placeholder="Repeat your password"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
 
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2">
-              {error}
-            </p>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Creating account…
+            </>
+          ) : (
+            'Create Account'
           )}
+        </button>
+      </form>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
-          >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="text-green-600 font-medium hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
+      <p className="text-center text-sm text-gray-500">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }
