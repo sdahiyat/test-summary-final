@@ -1,0 +1,45 @@
+{
+  "overview": "Adds a food database layer with 200+ seed entries, a paginated partial-match search API, and a by-ID lookup endpoint. A CLI seed script populates the Supabase `foods` table in batches, and a shared client-side helper wraps the search route.",
+  "summary_json": {
+    "New API routes": "GET /api/foods/search?q=&page=&limit=, GET /api/foods/[id]",
+    "Search params": "q (required), page (default 1), limit (default 20, max 50)",
+    "Seed item count": "200+ foods with calories, protein, carbs, fat, fiber, sugar, sodium",
+    "Seed script command": "npm run seed:foods",
+    "Required env vars": "NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (seed), NEXT_PUBLIC_SUPABASE_ANON_KEY (API routes)",
+    "Batch size": "50 records per insert batch",
+    "New npm scripts": "seed:foods added to package.json",
+    "New dev dependencies": "ts-node ^10.9.1, tsconfig-paths ^4.2.0, dotenv ^16.0.0"
+  },
+  "files_changed": [
+    {
+      "path": "src/lib/supabase/foods-seed.ts",
+      "summary": "Large static array of 200+ food items with full nutritional fields used as seed source data."
+    },
+    {
+      "path": "scripts/seed-foods.ts",
+      "summary": "CLI script that reads SEED_FOODS and upserts them into Supabase foods table in batches of 50 using service role key."
+    },
+    {
+      "path": "src/app/api/foods/search/route.ts",
+      "summary": "Next.js GET route for partial-match food search with pagination, returning results ranked by relevance from Supabase."
+    },
+    {
+      "path": "src/app/api/foods/[id]/route.ts",
+      "summary": "Next.js GET route that fetches a single food record by ID, returning 404 when not found."
+    },
+    {
+      "path": "src/lib/foods.ts",
+      "summary": "Client-side TypeScript types and searchFoods/getFoodById fetch helpers wrapping the new API routes."
+    },
+    {
+      "path": "package.json",
+      "summary": "Adds seed:foods npm script and ts-node/tsconfig-paths/dotenv dev dependencies needed to run the seed script."
+    },
+    {
+      "path": "tsconfig.json",
+      "summary": "Adds ts-node compilerOptions block (CommonJS module, node resolution) so the seed script can run outside Next.js bundler."
+    }
+  ],
+  "extras": "Verify: run `npm run seed:foods` with a valid .env.local, then hit GET /api/foods/search?q=rice to confirm results. Risk: search route uses anon key — ensure Supabase RLS on foods table allows public read. Follow-up: consider adding a full-text index (pg tsvector) on the foods table for better relevance ranking at scale.",
+  "fallback_text": "PR #10 builds the food database infrastructure. A 200+ item seed array (foods-seed.ts) covers grains, proteins, dairy, etc. with accurate macros and serving sizes. A CLI script (scripts/seed-foods.ts, run via npm run seed:foods) inserts them into Supabase in batches of 50 using the service role key. Two API routes are added: GET /api/foods/search supports partial matching with page/limit pagination, and GET /api/foods/[id] returns a single food or 404. A shared src/lib/foods.ts exports TypeScript types and fetch wrappers for client use. package.json gains the seed:foods script plus ts-node, tsconfig-paths, and dotenv dev deps; tsconfig.json gets a ts-node block for CommonJS compatibility. Required env vars: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for the API routes, plus SUPABASE_SERVICE_ROLE_KEY for seeding."
+}
