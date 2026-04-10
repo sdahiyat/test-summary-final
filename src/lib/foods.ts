@@ -1,137 +1,113 @@
-// Single source of truth for the FoodItem type and food-related utilities
-
-export interface FoodItem {
+export type Food = {
   id: string;
   name: string;
   brand: string | null;
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  fiber_g: number | null;
-  sugar_g: number | null;
-  sodium_mg: number | null;
   serving_size: number;
   serving_unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  sugar: number | null;
+  sodium: number | null;
   is_verified: boolean;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+};
 
-export interface FoodSearchParams {
-  q?: string;
+export type FoodSearchResponse = {
+  data: Food[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type SearchFoodsOptions = {
+  q: string;
   page?: number;
   limit?: number;
-  category?: string;
-}
+};
 
-export interface FoodSearchResult {
-  data: FoodItem[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-}
+export async function searchFoods(
+  options: SearchFoodsOptions
+): Promise<FoodSearchResponse> {
+  const { q, page = 1, limit = 20 } = options;
 
-export interface NutritionValues {
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  fiber_g: number;
-}
+  const params = new URLSearchParams({
+    q,
+    page: String(page),
+    limit: String(limit),
+  });
 
-export const COMMON_SERVING_UNITS = [
-  'g',
-  'oz',
-  'cup',
-  'tbsp',
-  'tsp',
-  'piece',
-  'slice',
-  'medium',
-  'large',
-  'small',
-  'ml',
-  'fl oz',
-  'serving',
-] as const;
-
-export type ServingUnit = (typeof COMMON_SERVING_UNITS)[number];
-
-/**
- * Search foods using the API endpoint with partial matching and pagination.
- */
-export async function searchFoods(params: FoodSearchParams): Promise<FoodSearchResult> {
-  const searchParams = new URLSearchParams();
-
-  if (params.q) searchParams.set('q', params.q);
-  if (params.page !== undefined) searchParams.set('page', String(params.page));
-  if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
-  if (params.category) searchParams.set('category', params.category);
-
-  const url = `/api/foods/search${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
-  const response = await fetch(url);
+  const response = await fetch(`/api/foods/search?${params.toString()}`);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || `Search failed with status ${response.status}`);
+    let message = `Search failed with status ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // ignore parse errors — keep the default message
+    }
+    throw new Error(message);
   }
 
-  return response.json();
+  return response.json() as Promise<FoodSearchResponse>;
 }
 
-/**
- * Fetch a single food item by its UUID.
- * Returns null if the food is not found (404).
- */
-export async function getFoodById(id: string): Promise<FoodItem | null> {
-  const response = await fetch(`/api/foods/${id}`);
+export async function getFoodById(id: string): Promise<Food | null> {
+  const response = await fetch(`/api/foods/${encodeURIComponent(id)}`);
 
   if (response.status === 404) {
     return null;
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || `Failed to fetch food with status ${response.status}`);
+    let message = `Failed to fetch food with status ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
   }
 
-  return response.json();
+  return response.json() as Promise<Food>;
 }
 
 /**
- * Calculate nutrition values for a given quantity of a food item.
- * Scales all macros proportionally based on (quantity / serving_size).
+ * Calculate nutrition for a given food and quantity.
+ *
+ * @param food     - The food item (with per-serving nutrition values).
+ * @param quantity - The amount in the same units as `food.serving_unit`.
+ * @returns Scaled nutrition values rounded to one decimal place.
  */
-export function calculateNutrition(food: FoodItem, quantity: number): NutritionValues {
+export function calculateNutrition(
+  food: Food,
+  quantity: number
+): {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  sugar: number | null;
+  sodium: number | null;
+} {
   const ratio = quantity / food.serving_size;
 
-  const round1 = (n: number) => Math.round(n * 10) / 10;
+  const round = (value: number) => Math.round(value * 10) / 10;
 
   return {
-    calories: round1(food.calories * ratio),
-    protein_g: round1(food.protein_g * ratio),
-    carbs_g: round1(food.carbs_g * ratio),
-    fat_g: round1(food.fat_g * ratio),
-    fiber_g: round1((food.fiber_g ?? 0) * ratio),
+    calories: round(food.calories * ratio),
+    protein: round(food.protein * ratio),
+    carbs: round(food.carbs * ratio),
+    fat: round(food.fat * ratio),
+    fiber: food.fiber !== null ? round(food.fiber * ratio) : null,
+    sugar: food.sugar !== null ? round(food.sugar * ratio) : null,
+    sodium: food.sodium !== null ? round(food.sodium * ratio) : null,
   };
-}
-
-/**
- * Format a food's serving for display (e.g., "28 g", "1 cup").
- */
-export function formatServing(food: FoodItem): string {
-  return `${food.serving_size} ${food.serving_unit}`;
-}
-
-/**
- * Get a display-friendly name for a food item.
- */
-export function getFoodDisplayName(food: FoodItem): string {
-  if (food.brand) {
-    return `${food.name} (${food.brand})`;
-  }
-  return food.name;
 }
