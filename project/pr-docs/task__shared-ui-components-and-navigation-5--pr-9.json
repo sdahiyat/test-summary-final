@@ -1,0 +1,51 @@
+{
+  "overview": "This PR introduces a shared UI component library and responsive navigation structure for the app. It adds reusable primitives (Button, Input, Select, Card, Modal, Spinner/Skeleton, Toast) plus a NavBar that adapts between bottom-tab (mobile) and sidebar (desktop) layouts. An authenticated app layout wrapper with responsive breakpoint handling is also included.",
+  "summary_json": {
+    "New components": "Button, Spinner/SkeletonLine/SkeletonCard/PageLoader, Card/MealCard/FoodItemCard, Input/Textarea, Select, Modal/ConfirmModal, Toast/ToastProvider, NavBar",
+    "Barrel export": "src/components/ui/index.ts exports all UI primitives and their types",
+    "Navigation": "NavBar uses bottom tabs on mobile, sidebar on desktop; graceful fallback if AuthContext not yet available",
+    "Toast system": "Context-based ToastProvider with success, error, warning, info variants and auto-dismiss",
+    "Modal behavior": "Portal-rendered, Escape-key dismissal, scroll-lock, backdrop click to close",
+    "Files omitted": "Some files skipped by preview cap (cap_note present); full diff may include layout wrapper and additional nav files"
+  },
+  "files_changed": [
+    {
+      "path": "src/components/ui/Button.tsx",
+      "summary": "Reusable button with primary/secondary/ghost/danger variants, sm/md/lg sizes, loading state via Spinner, and disabled handling."
+    },
+    {
+      "path": "src/components/ui/Spinner.tsx",
+      "summary": "SVG-based Spinner plus SkeletonLine (animate-pulse) for loading states; imports Card for skeleton card variant."
+    },
+    {
+      "path": "src/components/ui/Card.tsx",
+      "summary": "Base Card, MealCard (shows macro breakdown + add/view actions), and FoodItemCard components for meal/food display."
+    },
+    {
+      "path": "src/components/ui/Input.tsx",
+      "summary": "Controlled Input and Textarea with label, validation error styling (red border/ring), and helper text."
+    },
+    {
+      "path": "src/components/ui/Select.tsx",
+      "summary": "Styled select with label, error state, placeholder option, and custom appearance via Tailwind."
+    },
+    {
+      "path": "src/components/ui/Modal.tsx",
+      "summary": "Portal-rendered Modal with Escape-key dismiss, body scroll-lock, backdrop click close, sm/md/lg sizes, and a ConfirmModal variant."
+    },
+    {
+      "path": "src/components/ui/Toast.tsx",
+      "summary": "Context-driven toast system with four severity types, per-toast duration, icons, and auto-remove logic."
+    },
+    {
+      "path": "src/components/ui/index.ts",
+      "summary": "Central barrel that re-exports all UI components and TypeScript types for clean import paths."
+    },
+    {
+      "path": "src/components/navigation/NavBar.tsx",
+      "summary": "Responsive NavBar with bottom-tab layout on mobile and sidebar on desktop; gracefully skips AuthContext if unavailable."
+    }
+  ],
+  "extras": "Verify: import from '@/components/ui' resolves correctly; test NavBar responsive breakpoints at mobile (<768px) and desktop widths; confirm ToastProvider is mounted at app root before useToast is called. Follow-up: cap_note indicates additional files (likely AppLayout wrapper) were omitted — confirm those landed in the branch.",
+  "fallback_text": "PR 9 adds the full shared UI component library and navigation for the app. New primitives in src/components/ui include Button (4 variants, 3 sizes, loading spinner), Input/Textarea, Select, Card/MealCard/FoodItemCard, Modal/ConfirmModal (portal, Escape, scroll-lock), Spinner/Skeleton loaders, and a context-based Toast system with four severity levels. All components are re-exported from a barrel index. The NavBar in src/components/navigation renders bottom tabs on mobile and a sidebar on desktop, with a safe require() fallback if AuthContext is not yet available. Some files (likely the authenticated layout wrapper) were cut by the preview cap and should be verified in the full diff."
+}
