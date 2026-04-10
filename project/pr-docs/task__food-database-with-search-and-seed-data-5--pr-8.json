@@ -1,0 +1,47 @@
+{
+  "overview": "This PR establishes the food database infrastructure for a nutrition tracking app. It adds a Supabase migration with the initial schema and seeds 200+ food items across 9 categories with accurate nutritional data. Three Next.js API routes expose paginated listing, partial-match search, and single-item lookup for the foods table.",
+  "summary_json": {
+    "New API routes": "GET /api/foods, GET /api/foods/search, GET /api/foods/[id]",
+    "Seed data": "200+ foods across Proteins, Grains, Vegetables, Fruits, Dairy, Fats/Nuts, Legumes, Snacks, Beverages",
+    "Search behavior": "Partial name matching, paginated results (default 20, max 50), ordered by relevance/name",
+    "Required env vars": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY",
+    "DB extensions": "uuid-ossp, pgcrypto",
+    "Service role usage": "All food API routes use service role client (bypasses RLS) — server-side only"
+  },
+  "files_changed": [
+    {
+      "path": "supabase/migrations/20240101000000_initial_schema.sql",
+      "summary": "Defines the full initial DB schema including users, user_goals, foods, meals, meal_items, weight_log, and related tables with constraints and indexes."
+    },
+    {
+      "path": "supabase/migrations/20240102000000_seed_foods.sql",
+      "summary": "Inserts 200+ verified food records with per-serving nutritional values (calories, protein, carbs, fat, fiber) across 9 food categories."
+    },
+    {
+      "path": "src/lib/supabase.ts",
+      "summary": "Initializes the Supabase public client and exports a service-role client factory for server-side use, with env var validation."
+    },
+    {
+      "path": "src/lib/supabase.types.ts",
+      "summary": "Defines TypeScript types for all DB tables (FoodRow, MealRow, etc.) and enums used across the app."
+    },
+    {
+      "path": "src/lib/foods.ts",
+      "summary": "Exports the canonical FoodItem interface, search param/result types, serving unit constants, and a searchFoods utility function wrapping the search API."
+    },
+    {
+      "path": "src/app/api/foods/search/route.ts",
+      "summary": "GET endpoint supporting partial-match food search with q, page, and limit params; returns paginated results ordered by name."
+    },
+    {
+      "path": "src/app/api/foods/[id]/route.ts",
+      "summary": "GET endpoint that fetches a single food by UUID, returning 404 for missing records and 500 for DB errors."
+    },
+    {
+      "path": "src/app/api/foods/route.ts",
+      "summary": "GET endpoint for paginated food listing with optional orderBy=calories param, defaulting to name ordering."
+    }
+  ],
+  "extras": "Verify: run the seed migration and hit GET /api/foods?page=1 to confirm 200+ rows. Test search with GET /api/foods/search?q=chicken. Risk: all food routes use the service role client which bypasses RLS — confirm no auth-gated food mutations are exposed via these routes in future PRs.",
+  "fallback_text": "PR #8 adds food database infrastructure. A Supabase migration creates the full schema (users, foods, meals, etc.) and a second migration seeds 200+ foods across 9 categories with verified nutritional data. Three Next.js API routes are added: GET /api/foods (paginated list), GET /api/foods/search (partial-match search, max 50 results per page), and GET /api/foods/[id] (single food lookup). A shared supabase.ts client module and foods.ts utility library support the routes. Required env vars: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. All routes use the service role client server-side."
+}
