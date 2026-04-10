@@ -1,157 +1,129 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
+'use client';
 
-interface ModalProps {
+import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { Button } from './Button';
+
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  closeOnBackdrop?: boolean;
-  showCloseButton?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+  hideCloseButton?: boolean;
 }
-
-const sizeMap = {
-  sm: 'sm:max-w-sm',
-  md: 'sm:max-w-md',
-  lg: 'sm:max-w-lg',
-  xl: 'sm:max-w-xl',
-  full: 'sm:max-w-full sm:m-4',
-};
 
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
-  size = 'md',
-  closeOnBackdrop = true,
-  showCloseButton = true,
   children,
+  size = 'md',
+  hideCloseButton = false,
 }) => {
-  const [mounted, setMounted] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!isOpen) return;
 
-  useEffect(() => {
-    if (isOpen) {
-      setVisible(true);
-      document.body.classList.add('overflow-hidden');
-    } else {
-      setVisible(false);
-      document.body.classList.remove('overflow-hidden');
-    }
-    return () => {
-      document.body.classList.remove('overflow-hidden');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
     };
-  }, [isOpen]);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    },
-    [onClose]
-  );
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, handleKeyDown]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
-  if (!mounted) return null;
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  const modal = (
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+  };
+
+  const modalContent = (
     <div
-      className={cn(
-        'fixed inset-0 z-50 flex items-end sm:items-center justify-center',
-        'transition-opacity duration-200',
-        visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      )}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
-        onClick={closeOnBackdrop ? onClose : undefined}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <div
-        ref={panelRef}
-        className={cn(
-          'relative bg-white rounded-t-2xl sm:rounded-2xl w-full shadow-xl',
-          'transition-transform duration-300',
-          sizeMap[size],
-          visible ? 'translate-y-0' : 'translate-y-full sm:translate-y-4'
-        )}
+        className={['bg-white rounded-xl shadow-xl w-full', sizeClasses[size]].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
       >
-        {(title || showCloseButton) && (
-          <ModalHeader onClose={showCloseButton ? onClose : undefined}>
-            {title}
-          </ModalHeader>
+        {(title || !hideCloseButton) && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            {title && (
+              <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+                {title}
+              </h2>
+            )}
+            {!hideCloseButton && (
+              <button
+                onClick={onClose}
+                className="ml-auto p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+                aria-label="Close modal"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
         )}
-        {children}
+        <div className="px-6 py-4">{children}</div>
       </div>
     </div>
   );
 
-  return createPortal(modal, document.body);
+  return ReactDOM.createPortal(modalContent, document.body);
 };
 
-interface ModalHeaderProps {
-  onClose?: () => void;
-  className?: string;
-  children?: React.ReactNode;
+export interface ConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'primary';
 }
 
-export const ModalHeader: React.FC<ModalHeaderProps> = ({
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({
+  isOpen,
   onClose,
-  className,
-  children,
-}) => (
-  <div
-    className={cn(
-      'flex items-center justify-between px-4 py-4 border-b border-gray-100',
-      className
-    )}
-  >
-    <h2 className="text-base font-semibold text-gray-900">{children}</h2>
-    {onClose && (
-      <button
-        onClick={onClose}
-        className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Close modal"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    )}
-  </div>
-);
-
-interface ModalSectionProps {
-  className?: string;
-  children: React.ReactNode;
-}
-
-export const ModalBody: React.FC<ModalSectionProps> = ({ className, children }) => (
-  <div className={cn('p-4 overflow-y-auto', className)}>{children}</div>
-);
-
-export const ModalFooter: React.FC<ModalSectionProps> = ({ className, children }) => (
-  <div className={cn('p-4 pt-0 flex gap-2 justify-end', className)}>{children}</div>
-);
-
-export default Modal;
+  onConfirm,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'primary',
+}) => {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+      <p className="text-sm text-gray-600 mb-6">{message}</p>
+      <div className="flex gap-3 justify-end">
+        <Button variant="secondary" size="sm" onClick={onClose}>
+          {cancelLabel}
+        </Button>
+        <Button variant={variant === 'danger' ? 'danger' : 'primary'} size="sm" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </div>
+    </Modal>
+  );
+};

@@ -1,10 +1,9 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  });
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -12,10 +11,14 @@ export function useMediaQuery(query: string): boolean {
     const mediaQuery = window.matchMedia(query);
     setMatches(mediaQuery.matches);
 
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mediaQuery.addEventListener('change', handler);
+    const handler = (event: MediaQueryListEvent) => {
+      setMatches(event.matches);
+    };
 
-    return () => mediaQuery.removeEventListener('change', handler);
+    mediaQuery.addEventListener('change', handler);
+    return () => {
+      mediaQuery.removeEventListener('change', handler);
+    };
   }, [query]);
 
   return matches;
@@ -24,9 +27,3 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 767px)');
 }
-
-export function useIsDesktop(): boolean {
-  return useMediaQuery('(min-width: 768px)');
-}
-
-export default useMediaQuery;

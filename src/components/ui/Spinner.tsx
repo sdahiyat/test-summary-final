@@ -1,60 +1,91 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+'use client';
 
-interface SpinnerProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg';
-  color?: 'green' | 'white' | 'gray';
+import React from 'react';
+import { Card } from './Card';
+
+export interface SpinnerProps {
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-const sizeMap = {
-  xs: 16,
-  sm: 20,
-  md: 24,
-  lg: 32,
-};
-
-const colorMap = {
-  green: '#22c55e',
-  white: '#ffffff',
-  gray: '#9ca3af',
-};
-
-export const Spinner: React.FC<SpinnerProps> = ({
-  size = 'md',
-  color = 'green',
-  className,
-}) => {
-  const px = sizeMap[size];
-  const stroke = colorMap[color];
+export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', className = '' }) => {
+  const sizeClasses = {
+    sm: 'h-4 w-4',
+    md: 'h-6 w-6',
+    lg: 'h-8 w-8',
+  };
 
   return (
     <svg
-      width={px}
-      height={px}
-      viewBox="0 0 24 24"
+      className={['animate-spin text-primary-600', sizeClasses[size], className]
+        .filter(Boolean)
+        .join(' ')}
+      xmlns="http://www.w3.org/2000/svg"
       fill="none"
-      className={cn('animate-spin', className)}
-      role="status"
-      aria-label="Loading"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
     >
-      <title>Loading...</title>
       <circle
+        className="opacity-25"
         cx="12"
         cy="12"
         r="10"
-        stroke={stroke}
-        strokeWidth="3"
-        strokeOpacity="0.25"
+        stroke="currentColor"
+        strokeWidth="4"
       />
       <path
-        d="M12 2a10 10 0 0 1 10 10"
-        stroke={stroke}
-        strokeWidth="3"
-        strokeLinecap="round"
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
       />
     </svg>
   );
 };
 
-export default Spinner;
+export interface SkeletonLineProps {
+  width?: string;
+  height?: string;
+  className?: string;
+}
+
+export const SkeletonLine: React.FC<SkeletonLineProps> = ({
+  width = '100%',
+  height = '1rem',
+  className = '',
+}) => {
+  return (
+    <div
+      className={['animate-pulse bg-gray-200 rounded', className].filter(Boolean).join(' ')}
+      style={{ width, height }}
+    />
+  );
+};
+
+export const SkeletonCard: React.FC = () => {
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <SkeletonLine width="40%" height="1.25rem" />
+        <SkeletonLine width="20%" height="1.25rem" />
+      </div>
+      <SkeletonLine width="60%" height="1rem" />
+      <div className="flex gap-3">
+        <SkeletonLine width="30%" height="0.875rem" />
+        <SkeletonLine width="30%" height="0.875rem" />
+        <SkeletonLine width="30%" height="0.875rem" />
+      </div>
+      <div className="flex gap-2 pt-1">
+        <SkeletonLine width="45%" height="2rem" />
+        <SkeletonLine width="45%" height="2rem" />
+      </div>
+    </Card>
+  );
+};
+
+export const PageLoader: React.FC = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spinner size="lg" />
+    </div>
+  );
+};
