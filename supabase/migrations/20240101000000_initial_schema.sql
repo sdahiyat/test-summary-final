@@ -2,10 +2,8 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ============================================================
--- TABLE: public.users
--- ============================================================
-CREATE TABLE public.users (
+-- Users table (extends Supabase auth.users)
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
   full_name TEXT,
@@ -13,353 +11,193 @@ CREATE TABLE public.users (
   date_of_birth DATE,
   gender TEXT CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say')),
   height_cm NUMERIC(5,2),
+  current_weight_kg NUMERIC(5,2),
   activity_level TEXT CHECK (activity_level IN ('sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extra_active')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: public.user_goals
--- ============================================================
-CREATE TABLE public.user_goals (
+-- User goals table
+CREATE TABLE IF NOT EXISTS user_goals (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
-  calories_target INTEGER,
-  protein_target_g NUMERIC(6,2),
-  carbs_target_g NUMERIC(6,2),
-  fat_target_g NUMERIC(6,2),
-  fiber_target_g NUMERIC(6,2),
-  water_target_ml INTEGER,
-  goal_type TEXT CHECK (goal_type IN ('lose_weight', 'maintain', 'gain_weight', 'build_muscle')),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('weight_loss', 'maintenance', 'muscle_gain')),
   target_weight_kg NUMERIC(5,2),
-  weekly_goal_kg NUMERIC(3,2),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  daily_calories_target INTEGER,
+  daily_protein_g INTEGER,
+  daily_carbs_g INTEGER,
+  daily_fat_g INTEGER,
+  start_date DATE DEFAULT CURRENT_DATE,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: public.foods
--- ============================================================
-CREATE TABLE public.foods (
+-- Foods table (nutrition database)
+CREATE TABLE IF NOT EXISTS foods (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   brand TEXT,
-  barcode TEXT,
-  serving_size NUMERIC(8,2) NOT NULL DEFAULT 100,
-  serving_unit TEXT NOT NULL DEFAULT 'g',
-  calories_per_serving NUMERIC(8,2) NOT NULL,
-  protein_g NUMERIC(8,2) NOT NULL DEFAULT 0,
-  carbs_g NUMERIC(8,2) NOT NULL DEFAULT 0,
-  fat_g NUMERIC(8,2) NOT NULL DEFAULT 0,
-  fiber_g NUMERIC(8,2) DEFAULT 0,
-  sugar_g NUMERIC(8,2) DEFAULT 0,
-  sodium_mg NUMERIC(8,2) DEFAULT 0,
-  is_verified BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ============================================================
--- TABLE: public.meals
--- ============================================================
-CREATE TABLE public.meals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  meal_type TEXT NOT NULL CHECK (meal_type IN ('breakfast', 'lunch', 'dinner', 'snack')),
-  meal_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ============================================================
--- TABLE: public.meal_items
--- ============================================================
-CREATE TABLE public.meal_items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  meal_id UUID NOT NULL REFERENCES public.meals(id) ON DELETE CASCADE,
-  food_id UUID NOT NULL REFERENCES public.foods(id) ON DELETE RESTRICT,
-  quantity NUMERIC(8,2) NOT NULL,
-  unit TEXT NOT NULL DEFAULT 'g',
   calories NUMERIC(8,2) NOT NULL,
   protein_g NUMERIC(8,2) NOT NULL DEFAULT 0,
   carbs_g NUMERIC(8,2) NOT NULL DEFAULT 0,
   fat_g NUMERIC(8,2) NOT NULL DEFAULT 0,
-  fiber_g NUMERIC(8,2) DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  fiber_g NUMERIC(8,2),
+  sugar_g NUMERIC(8,2),
+  sodium_mg NUMERIC(8,2),
+  serving_size NUMERIC(8,2) NOT NULL DEFAULT 100,
+  serving_unit TEXT NOT NULL DEFAULT 'g',
+  is_verified BOOLEAN DEFAULT FALSE,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: public.weight_log
--- ============================================================
-CREATE TABLE public.weight_log (
+-- Add search vector column for full-text search
+ALTER TABLE foods ADD COLUMN IF NOT EXISTS search_vector tsvector;
+
+-- Create GIN index for full-text search
+CREATE INDEX IF NOT EXISTS foods_search_idx ON foods USING GIN(search_vector);
+
+-- Create index on food name for ILIKE queries
+CREATE INDEX IF NOT EXISTS foods_name_lower_idx ON foods(lower(name));
+
+-- Create index on name for ordering
+CREATE INDEX IF NOT EXISTS foods_name_idx ON foods(name);
+
+-- Function to update search_vector
+CREATE OR REPLACE FUNCTION foods_search_vector_update() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english', NEW.name || ' ' || COALESCE(NEW.brand, ''));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to auto-update search_vector on insert/update
+DROP TRIGGER IF EXISTS foods_search_vector_trigger ON foods;
+CREATE TRIGGER foods_search_vector_trigger
+  BEFORE INSERT OR UPDATE ON foods
+  FOR EACH ROW EXECUTE FUNCTION foods_search_vector_update();
+
+-- Meals table
+CREATE TABLE IF NOT EXISTS meals (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  log_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  weight_value NUMERIC(6,2) NOT NULL,
-  unit TEXT NOT NULL DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs')),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  meal_type TEXT NOT NULL CHECK (meal_type IN ('breakfast', 'lunch', 'dinner', 'snack')),
+  logged_at TIMESTAMPTZ DEFAULT NOW(),
   notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(user_id, log_date)
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================
--- TABLE: public.food_images
--- ============================================================
-CREATE TABLE public.food_images (
+-- Meal items table (individual food entries within a meal)
+CREATE TABLE IF NOT EXISTS meal_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  meal_id UUID REFERENCES public.meals(id) ON DELETE SET NULL,
+  meal_id UUID NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+  food_id UUID REFERENCES foods(id) ON DELETE SET NULL,
+  food_name TEXT NOT NULL,
+  quantity NUMERIC(8,2) NOT NULL DEFAULT 1,
+  unit TEXT NOT NULL DEFAULT 'serving',
+  calories NUMERIC(8,2) NOT NULL,
+  protein_g NUMERIC(8,2) NOT NULL DEFAULT 0,
+  carbs_g NUMERIC(8,2) NOT NULL DEFAULT 0,
+  fat_g NUMERIC(8,2) NOT NULL DEFAULT 0,
+  fiber_g NUMERIC(8,2),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Weight log table
+CREATE TABLE IF NOT EXISTS weight_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  weight_kg NUMERIC(5,2) NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs')),
+  logged_at DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Food images table (for AI photo storage metadata)
+CREATE TABLE IF NOT EXISTS food_images (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  meal_id UUID REFERENCES meals(id) ON DELETE SET NULL,
   image_url TEXT NOT NULL,
   storage_path TEXT,
-  ai_analysis_result JSONB,
-  ai_model_version TEXT,
-  analysis_status TEXT NOT NULL DEFAULT 'pending' CHECK (analysis_status IN ('pending', 'processing', 'completed', 'failed')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  analysis_status TEXT DEFAULT 'pending' CHECK (analysis_status IN ('pending', 'processing', 'completed', 'failed')),
+  analysis_result JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================
--- INDEXES
--- ============================================================
-CREATE INDEX idx_meals_user_id_date ON public.meals(user_id, meal_date);
-CREATE INDEX idx_meal_items_meal_id ON public.meal_items(meal_id);
-CREATE INDEX idx_weight_log_user_id_date ON public.weight_log(user_id, log_date);
-CREATE INDEX idx_foods_user_id ON public.foods(user_id);
-CREATE INDEX idx_food_images_user_id ON public.food_images(user_id);
-CREATE INDEX idx_food_images_meal_id ON public.food_images(meal_id);
+-- Enable Row Level Security
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE foods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weight_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE food_images ENABLE ROW LEVEL SECURITY;
 
--- ============================================================
--- UPDATED_AT TRIGGER FUNCTION
--- ============================================================
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$;
+-- RLS Policies for users
+CREATE POLICY "Users can view own profile" ON users
+  FOR SELECT USING (auth.uid() = id);
 
--- Attach updated_at trigger to all tables with updated_at column
-CREATE TRIGGER trigger_users_updated_at
-  BEFORE UPDATE ON public.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE POLICY "Users can update own profile" ON users
+  FOR UPDATE USING (auth.uid() = id);
 
-CREATE TRIGGER trigger_user_goals_updated_at
-  BEFORE UPDATE ON public.user_goals
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE POLICY "Users can insert own profile" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id);
 
-CREATE TRIGGER trigger_foods_updated_at
-  BEFORE UPDATE ON public.foods
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+-- RLS Policies for user_goals
+CREATE POLICY "Users can view own goals" ON user_goals
+  FOR SELECT USING (auth.uid() = user_id);
 
-CREATE TRIGGER trigger_meals_updated_at
-  BEFORE UPDATE ON public.meals
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE POLICY "Users can manage own goals" ON user_goals
+  FOR ALL USING (auth.uid() = user_id);
 
--- ============================================================
--- USER SYNC TRIGGER (auth.users -> public.users)
--- ============================================================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.users (id, email, full_name, avatar_url)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'avatar_url'
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$;
+-- RLS Policies for foods (public read, authenticated write)
+CREATE POLICY "Anyone can view foods" ON foods
+  FOR SELECT USING (TRUE);
 
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+CREATE POLICY "Authenticated users can insert foods" ON foods
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- ============================================================
--- ROW LEVEL SECURITY
--- ============================================================
+CREATE POLICY "Users can update own foods" ON foods
+  FOR UPDATE USING (auth.uid() = created_by OR created_by IS NULL);
 
--- Enable RLS on all tables
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_goals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.foods ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.meals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.meal_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.weight_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.food_images ENABLE ROW LEVEL SECURITY;
+-- RLS Policies for meals
+CREATE POLICY "Users can view own meals" ON meals
+  FOR SELECT USING (auth.uid() = user_id);
 
--- ---- public.users policies ----
-CREATE POLICY "users_select_own"
-  ON public.users
-  FOR SELECT
-  USING (id = auth.uid());
+CREATE POLICY "Users can manage own meals" ON meals
+  FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "users_update_own"
-  ON public.users
-  FOR UPDATE
-  USING (id = auth.uid())
-  WITH CHECK (id = auth.uid());
-
--- ---- public.user_goals policies ----
-CREATE POLICY "user_goals_select_own"
-  ON public.user_goals
-  FOR SELECT
-  USING (user_id = auth.uid());
-
-CREATE POLICY "user_goals_insert_own"
-  ON public.user_goals
-  FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "user_goals_update_own"
-  ON public.user_goals
-  FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "user_goals_delete_own"
-  ON public.user_goals
-  FOR DELETE
-  USING (user_id = auth.uid());
-
--- ---- public.foods policies ----
--- SELECT: own foods OR global/shared foods (user_id IS NULL)
-CREATE POLICY "foods_select_own_or_global"
-  ON public.foods
-  FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL);
-
-CREATE POLICY "foods_insert_own"
-  ON public.foods
-  FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "foods_update_own"
-  ON public.foods
-  FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "foods_delete_own"
-  ON public.foods
-  FOR DELETE
-  USING (user_id = auth.uid());
-
--- ---- public.meals policies ----
-CREATE POLICY "meals_select_own"
-  ON public.meals
-  FOR SELECT
-  USING (user_id = auth.uid());
-
-CREATE POLICY "meals_insert_own"
-  ON public.meals
-  FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "meals_update_own"
-  ON public.meals
-  FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "meals_delete_own"
-  ON public.meals
-  FOR DELETE
-  USING (user_id = auth.uid());
-
--- ---- public.meal_items policies ----
-CREATE POLICY "meal_items_select_own"
-  ON public.meal_items
-  FOR SELECT
-  USING (
-    meal_id IN (
-      SELECT id FROM public.meals WHERE user_id = auth.uid()
+-- RLS Policies for meal_items
+CREATE POLICY "Users can view own meal items" ON meal_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM meals WHERE meals.id = meal_items.meal_id AND meals.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "meal_items_insert_own"
-  ON public.meal_items
-  FOR INSERT
-  WITH CHECK (
-    meal_id IN (
-      SELECT id FROM public.meals WHERE user_id = auth.uid()
+CREATE POLICY "Users can manage own meal items" ON meal_items
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM meals WHERE meals.id = meal_items.meal_id AND meals.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "meal_items_update_own"
-  ON public.meal_items
-  FOR UPDATE
-  USING (
-    meal_id IN (
-      SELECT id FROM public.meals WHERE user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    meal_id IN (
-      SELECT id FROM public.meals WHERE user_id = auth.uid()
-    )
-  );
+-- RLS Policies for weight_log
+CREATE POLICY "Users can view own weight log" ON weight_log
+  FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "meal_items_delete_own"
-  ON public.meal_items
-  FOR DELETE
-  USING (
-    meal_id IN (
-      SELECT id FROM public.meals WHERE user_id = auth.uid()
-    )
-  );
+CREATE POLICY "Users can manage own weight log" ON weight_log
+  FOR ALL USING (auth.uid() = user_id);
 
--- ---- public.weight_log policies ----
-CREATE POLICY "weight_log_select_own"
-  ON public.weight_log
-  FOR SELECT
-  USING (user_id = auth.uid());
+-- RLS Policies for food_images
+CREATE POLICY "Users can view own food images" ON food_images
+  FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "weight_log_insert_own"
-  ON public.weight_log
-  FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "weight_log_update_own"
-  ON public.weight_log
-  FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "weight_log_delete_own"
-  ON public.weight_log
-  FOR DELETE
-  USING (user_id = auth.uid());
-
--- ---- public.food_images policies ----
-CREATE POLICY "food_images_select_own"
-  ON public.food_images
-  FOR SELECT
-  USING (user_id = auth.uid());
-
-CREATE POLICY "food_images_insert_own"
-  ON public.food_images
-  FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "food_images_update_own"
-  ON public.food_images
-  FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "food_images_delete_own"
-  ON public.food_images
-  FOR DELETE
-  USING (user_id = auth.uid());
+CREATE POLICY "Users can manage own food images" ON food_images
+  FOR ALL USING (auth.uid() = user_id);

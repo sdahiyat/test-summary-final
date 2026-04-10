@@ -1,34 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './supabase.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {
-  throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_URL');
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL');
 }
 
 if (!supabaseAnonKey) {
-  throw new Error('Missing env var: NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Public client (uses anon key, respects RLS)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export default supabase;
-
-/**
- * Service-role Supabase client for server-side admin operations.
- * This bypasses Row Level Security — use only in trusted server contexts.
- * Never import this in client-side (browser) code.
- */
-export function createAdminClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceRoleKey) {
-    throw new Error('Missing env var: SUPABASE_SERVICE_ROLE_KEY');
+// Service role client (bypasses RLS — server-side only)
+export function createServiceRoleClient() {
+  if (!supabaseServiceRoleKey) {
+    throw new Error('Missing environment variable: SUPABASE_SERVICE_ROLE_KEY');
   }
-
-  return createClient<Database>(supabaseUrl!, serviceRoleKey, {
+  return createClient(supabaseUrl!, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -36,5 +28,7 @@ export function createAdminClient() {
   });
 }
 
-export type { Database };
-export * from './supabase.types';
+export default supabase;
+
+// Re-export types for consumer convenience
+export type { Database } from './supabase.types';
