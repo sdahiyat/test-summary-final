@@ -1,81 +1,91 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+import type { FoodSearchResponse, FoodCategory } from '@/types/food'
 
-function createSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  return createClient(url, key);
+function scoreFood(name: string, query: string): number {
+  const lowerName = name.toLowerCase()
+  const lowerQuery = query.toLowerCase()
+  if (lowerName === lowerQuery) return 100
+  if (lowerName.startsWith(lowerQuery)) return 90
+  if (lowerName.includes(`, ${lowerQuery}`) || lowerName.includes(` ${lowerQuery}`)) return 70
+  return 50
 }
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-
-  const q = searchParams.get('q');
-  if (!q || q.trim().length === 0) {
-    return NextResponse.json(
-      { error: 'Query parameter q is required' },
-      { status: 400 }
-    );
-  }
-
-  const rawPage = parseInt(searchParams.get('page') ?? '1', 10);
-  const rawLimit = parseInt(searchParams.get('limit') ?? '20', 10);
-
-  const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
-  const limit = Math.min(50, Math.max(1, isNaN(rawLimit) ? 20 : rawLimit));
-
-  const from = (page - 1) * limit;
-  const to = page * limit - 1;
-
-  let supabase: ReturnType<typeof createClient>;
+export async function GET(request: Request): Promise<NextResponse> {
   try {
-    supabase = createSupabaseClient();
-  } catch {
-    return NextResponse.json(
-      { error: 'Server configuration error' },
-      { status: 500 }
-    );
-  }
+    const { searchParams } = new URL(request.url)
 
-  const sanitizedQ = q.trim();
-
-  const { data, error, count } = await supabase
-    .from('foods')
-    .select(
-      'id, name, brand, serving_size, serving_unit, calories, protein, carbs, fat, fiber, sugar, sodium, is_verified',
-      { count: 'exact' }
+    const rawQuery = searchParams.get('query') ?? ''
+    const query = rawQuery.trim().toLowerCase()
+    const category = searchParams.get('category') as FoodCategory | null
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
+    const page_size = Math.min(
+      50,
+      Math.max(1, parseInt(searchParams.get('page_size') ?? '20', 10) || 20)
     )
-    .or(`name.ilike.%${sanitizedQ}%,brand.ilike.%${sanitizedQ}%`)
-    .order('is_verified', { ascending: false })
-    .order('name', { ascending: true })
-    .range(from, to);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const total = count ?? 0;
-  const totalPages = Math.ceil(total / limit);
-
-  return NextResponse.json(
-    {
-      data: data ?? [],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-      },
-    },
-    {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+    if (!query || query.length < 2) {
+      return NextResponse.json(
+        { error: 'Query must be at least 2 characters' },
+        { status: 400 }
+      )
     }
-  );
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+    let dbQuery = supabase
+      .from('foods')
+      .select('*')
+      .ilike('name', `%${query}%`)
+      .order('name', { ascending: true })
+      .limit(500)
+
+    if (category) {
+      dbQuery = dbQuery.eq('category', category)
+    }
+
+    const { data, error } = await dbQuery
+
+    if (error) {
+      console.error('Supabase query error:', error)
+      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
+    }
+
+    const results = data ?? []
+
+    // Sort by relevance score descending
+    const sorted = [...results].sort(
+      (a, b) => scoreFood(b.name, query) - scoreFood(a.name, query)
+    )
+
+    const total = sorted.length
+    const start = (page - 1) * page_size
+    const paginated = sorted.slice(start, start + page_size).map((food) => ({
+      ...food,
+      relevance_score: scoreFood(food.name, query),
+    }))
+
+    const response: FoodSearchResponse = {
+      data: paginated,
+      total,
+      page,
+      page_size,
+      has_more: start + page_size < total,
+    }
+
+    return NextResponse.json(response)
+  } catch (err) {
+    console.error('Unexpected error in /api/foods/search:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

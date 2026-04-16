@@ -1,57 +1,94 @@
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
-import { SEED_FOODS } from '../src/lib/supabase/foods-seed';
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-var-requires */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+require('dotenv').config({ path: '.env.local' })
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error(
-    '❌ Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY'
-  );
-  console.error('   Make sure your .env.local file is present and contains these values.');
-  process.exit(1);
-}
+const { createClient } = require('@supabase/supabase-js')
+const path = require('path')
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+// Resolve seed data relative to this script
+const seedPath = path.join(__dirname, '..', 'src', 'data', 'foods-seed')
 
-const BATCH_SIZE = 50;
+async function main() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-async function seedFoods() {
-  console.log(`🌱 Starting food database seed with ${SEED_FOODS.length} foods...`);
-
-  const batches: typeof SEED_FOODS[] = [];
-  for (let i = 0; i < SEED_FOODS.length; i += BATCH_SIZE) {
-    batches.push(SEED_FOODS.slice(i, i + BATCH_SIZE));
+  if (!supabaseUrl) {
+    throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL')
+  }
+  if (!supabaseServiceKey) {
+    throw new Error('Missing environment variable: SUPABASE_SERVICE_ROLE_KEY')
   }
 
-  const totalBatches = batches.length;
+  // Use service role key to bypass RLS
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    const { error } = await supabase
-      .from('foods')
-      .upsert(batch, { onConflict: 'name' });
+  // Check if foods table already has data
+  const { count, error: countError } = await supabase
+    .from('foods')
+    .select('*', { count: 'exact', head: true })
 
-    if (error) {
-      console.error(`❌ Error inserting batch ${batchIndex + 1}/${totalBatches}:`, error);
-      process.exit(1);
+  if (countError) {
+    throw new Error(`Failed to check existing data: ${countError.message}`)
+  }
+
+  if (count && count > 0) {
+    console.log(`Foods table already has ${count} rows. Skipping seed.`)
+    process.exit(0)
+  }
+
+  // Dynamically require the compiled/transpiled seed data
+  // When run via ts-node this is handled transparently
+  let SEED_FOODS
+  try {
+    const seedModule = require(seedPath)
+    SEED_FOODS = seedModule.SEED_FOODS
+  } catch (err) {
+    throw new Error(`Failed to load seed data from ${seedPath}: ${err}`)
+  }
+
+  if (!Array.isArray(SEED_FOODS) || SEED_FOODS.length === 0) {
+    throw new Error('SEED_FOODS is empty or not an array')
+  }
+
+  console.log(`Seeding ${SEED_FOODS.length} foods into the database...`)
+
+  // Batch insert in chunks of 50
+  const CHUNK_SIZE = 50
+  let totalInserted = 0
+
+  for (let i = 0; i < SEED_FOODS.length; i += CHUNK_SIZE) {
+    const chunk = SEED_FOODS.slice(i, i + CHUNK_SIZE)
+    const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
+    const totalChunks = Math.ceil(SEED_FOODS.length / CHUNK_SIZE)
+
+    console.log(`Inserting chunk ${chunkNumber}/${totalChunks} (${chunk.length} items)...`)
+
+    const { error: insertError } = await supabase.from('foods').insert(chunk)
+
+    if (insertError) {
+      throw new Error(
+        `Failed to insert chunk ${chunkNumber}: ${insertError.message}`
+      )
     }
 
-    console.log(
-      `   Inserted batch ${batchIndex + 1}/${totalBatches} (${batch.length} foods)`
-    );
+    totalInserted += chunk.length
+    console.log(`  ✓ Chunk ${chunkNumber} inserted (${totalInserted} total so far)`)
   }
 
-  console.log(`✓ Seeded ${SEED_FOODS.length} foods successfully`);
+  // Verify final count
+  const { count: finalCount, error: finalCountError } = await supabase
+    .from('foods')
+    .select('*', { count: 'exact', head: true })
+
+  if (finalCountError) {
+    console.warn(`Could not verify final count: ${finalCountError.message}`)
+  } else {
+    console.log(`\n✅ Seeding complete! ${finalCount} foods now in database.`)
+  }
 }
 
-seedFoods().catch((err) => {
-  console.error('❌ Unexpected error during seeding:', err);
-  process.exit(1);
-});
+main().catch((err) => {
+  console.error('❌ Seeding failed:', err.message || err)
+  process.exit(1)
+})

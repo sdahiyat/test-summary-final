@@ -1,19 +1,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "outDir": "./dist/scripts",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "target": "ES2017"
+    "outDir": ".scripts-dist",
+    "noEmit": false
   },
-  "include": [
-    "scripts/**/*",
-    "src/data/**/*",
-    "src/types/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    ".next"
-  ]
+  "include": ["scripts/**/*", "src/**/*"],
+  "exclude": ["node_modules"]
 }
