@@ -1,0 +1,36 @@
+{
+  "overview": "Sets up the complete PostgreSQL database schema for NutriTrack in Supabase via an initial migration, covering profiles, goals, foods, meals, meal_items, daily_logs, and insights tables with RLS policies. Also establishes typed Supabase client utilities for both browser and server-side use. This forms the data foundation all other features will depend on.",
+  "summary_json": {
+    "Tables created": "profiles, goals, foods, meals, meal_items, daily_logs, insights",
+    "Security": "Row Level Security (RLS) policies scoped per user on all tables",
+    "Env vars required": "NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY",
+    "Client pattern": "Singleton browser client; separate server client (anon + service-role); barrel export at @/lib/supabase",
+    "Type source": "src/lib/supabase/types.ts is single source of truth for all DB entity shapes",
+    "Out of scope": "Food data seeding, API routes, UI components",
+    "Breaking changes": "None; greenfield schema"
+  },
+  "files_changed": [
+    {
+      "path": "supabase/migrations/001_initial_schema.sql",
+      "summary": "Creates all NutriTrack tables with relationships, indexes, and RLS policies in a single initial migration."
+    },
+    {
+      "path": "src/lib/supabase/types.ts",
+      "summary": "Defines TypeScript enums and interfaces for every DB entity, serving as the single source of truth for type safety."
+    },
+    {
+      "path": "src/lib/supabase/client.ts",
+      "summary": "Exports a singleton typed Supabase browser client with session persistence for use in React Client Components."
+    },
+    {
+      "path": "src/lib/supabase/server.ts",
+      "summary": "Exports server-side Supabase clients (anon and service-role) for Server Components, Actions, and API routes."
+    },
+    {
+      "path": "src/lib/supabase/index.ts",
+      "summary": "Barrel re-export so all Supabase utilities and types can be imported from a single @/lib/supabase path."
+    }
+  ],
+  "extras": "Verify: run the migration against a Supabase project and confirm all tables and RLS policies appear in the dashboard. Follow-up: Task 2 should wire cookie-based session handling into createServerSupabaseClient so the anon-key server client inherits the user's JWT automatically.",
+  "fallback_text": "PR #12 adds the NutriTrack database foundation. A single Supabase migration (001_initial_schema.sql) creates seven tables — profiles, goals, foods, meals, meal_items, daily_logs, insights — with foreign keys, indexes, and per-user RLS policies. Alongside the migration, three client files are added under src/lib/supabase: client.ts (singleton browser client), server.ts (anon + service-role server clients), and types.ts (TypeScript interfaces and enums for all entities). A barrel index.ts re-exports everything from @/lib/supabase. Requires NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY env vars. Food seeding, API routes, and UI are out of scope for this PR."
+}
