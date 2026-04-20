@@ -1,0 +1,41 @@
+{
+  "overview": "This PR introduces a foundational shared UI component library and navigation structure for the app. Reusable components — Button, Input, Select, Spinner, Skeleton, and a utility class merger — are built following existing Tailwind patterns (btn-primary, btn-secondary). These primitives will be consumed across all feature screens for consistent loading states, form handling, and layout.",
+  "summary_json": {
+    "New components": "Button, Spinner, Input, Select, Skeleton (+ SkeletonText, SkeletonCard, SkeletonAvatar, SkeletonButton)",
+    "Utility added": "src/lib/cn.ts — lightweight class-name merger (no external dep)",
+    "Button variants": "primary, secondary, ghost, danger, outline",
+    "Button sizes": "sm, md, lg",
+    "Spinner sizes/colors": "sm/md/lg/xl; primary/white/gray",
+    "Input/Select features": "label, error, helperText, leftIcon, rightIcon, fullWidth, forwardRef",
+    "Out of scope": "Animations, Storybook docs, accessibility audit",
+    "Breaking changes": "None"
+  },
+  "files_changed": [
+    {
+      "path": "src/lib/cn.ts",
+      "summary": "Adds a minimal utility that filters falsy values and joins class strings, used by all UI components to compose Tailwind classes safely."
+    },
+    {
+      "path": "src/components/ui/Button.tsx",
+      "summary": "Reusable Button with five variants, three sizes, loading/disabled state (renders Spinner inline), optional left/right icons, and fullWidth support."
+    },
+    {
+      "path": "src/components/ui/Spinner.tsx",
+      "summary": "SVG-based animated spinner with four sizes and three color modes, plus a FullPageSpinner overlay for top-level loading states."
+    },
+    {
+      "path": "src/components/ui/Input.tsx",
+      "summary": "Accessible text input with label, helper text, error styling, icon slots, and forwardRef — auto-generates htmlFor id from label if not provided."
+    },
+    {
+      "path": "src/components/ui/Select.tsx",
+      "summary": "Dropdown select mirroring Input's API (label, error, helperText, fullWidth) with custom appearance and consistent focus/error ring styles."
+    },
+    {
+      "path": "src/components/ui/Skeleton.tsx",
+      "summary": "Collection of skeleton loading placeholders: generic Skeleton, SkeletonText (multi-line with varying widths), SkeletonCard, SkeletonAvatar, and SkeletonButton."
+    }
+  ],
+  "extras": "Verify: render each variant in a sandbox page; confirm btn-primary/btn-secondary Tailwind classes are defined in the global CSS/config. Follow-up: wire up navigation component (bottom/side nav with active states), modal/bottom sheet, toast, error boundary, and responsive layout wrapper — all listed in scope but not present in this file set.",
+  "fallback_text": "PR #14 ships the core shared UI primitives: a cn() class utility, a multi-variant Button (primary/secondary/ghost/danger/outline, sm/md/lg, loading state), a Spinner with size and color options plus a full-page overlay, an Input and Select with label/error/icon support, and a suite of Skeleton placeholders. All components use forwardRef and the Tailwind btn-primary/btn-secondary tokens. No breaking changes. Navigation, modal, toast, error boundary, and layout wrapper components are still pending and should follow in subsequent PRs."
+}
