@@ -1,12 +1,12 @@
 {
   "schema": "cofabric.task_status.v1",
   "task_number": 8,
-  "title": "AI Photo Meal Logging",
+  "title": "Progress Tracking & Charts",
   "status": "pending",
   "priority": "medium",
   "description": "",
   "completion_summary": null,
   "pr_url": null,
   "pr_doc": null,
-  "updated_at": "2026-04-09T21:32:35.063Z"
+  "updated_at": "2026-04-20T20:24:54.642Z"
 }

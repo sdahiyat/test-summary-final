@@ -1,12 +1,12 @@
 {
   "schema": "cofabric.task_status.v1",
   "task_number": 2,
-  "title": "Authentication System with Protected Routes",
+  "title": "Authentication System with Supabase Auth",
   "status": "pending",
   "priority": "high",
   "description": "",
   "completion_summary": null,
   "pr_url": null,
   "pr_doc": null,
-  "updated_at": "2026-04-09T21:32:32.697Z"
+  "updated_at": "2026-04-20T20:24:51.436Z"
 }

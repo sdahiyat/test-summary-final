@@ -1,12 +1,12 @@
 {
   "schema": "cofabric.task_status.v1",
   "task_number": 10,
-  "title": "AI Nutrition Insights and Feedback",
+  "title": "Settings & Preferences Management",
   "status": "pending",
-  "priority": "medium",
+  "priority": "low",
   "description": "",
   "completion_summary": null,
   "pr_url": null,
   "pr_doc": null,
-  "updated_at": "2026-04-09T21:32:35.783Z"
+  "updated_at": "2026-04-20T20:24:55.615Z"
 }

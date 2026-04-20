@@ -1,12 +1,12 @@
 {
   "schema": "cofabric.task_status.v1",
   "task_number": 9,
-  "title": "Progress Tracking and Weight History",
+  "title": "AI Nutrition Insights & Feedback",
   "status": "pending",
   "priority": "medium",
   "description": "",
   "completion_summary": null,
   "pr_url": null,
   "pr_doc": null,
-  "updated_at": "2026-04-09T21:32:35.431Z"
+  "updated_at": "2026-04-20T20:24:55.089Z"
 }
