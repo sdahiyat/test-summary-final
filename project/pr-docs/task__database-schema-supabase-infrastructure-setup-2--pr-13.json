@@ -1,0 +1,20 @@
+{
+  "overview": "This PR establishes the complete PostgreSQL database schema for NutriTrack inside Supabase, covering all core tables (profiles, foods, meals, meal_items, daily_logs, goals, insights), Row Level Security policies, and the Supabase client setup at @/lib/supabase. It forms the data foundation all other features will build on. API routes, UI components, and food data seeding are explicitly out of scope.",
+  "summary_json": {
+    "Tables created": "profiles, foods, meals, meal_items, daily_logs, goals, insights",
+    "RLS": "Policies configured so users can only access their own rows",
+    "Supabase client": "Initialized at @/lib/supabase",
+    "Type definitions": "Database entity types included",
+    "Out of scope": "Food data seeding, API routes, UI components",
+    "Migration file": "supabase/migrations/001_initial_schema.sql",
+    "Helper trigger": "update_updated_at_column() function added for automatic timestamp updates"
+  },
+  "files_changed": [
+    {
+      "path": "supabase/migrations/001_initial_schema.sql",
+      "summary": "Defines all NutriTrack tables with relationships, indexes, RLS policies, and an auto-update trigger for updated_at timestamps."
+    }
+  ],
+  "extras": "Verify: run migration against a fresh Supabase project and confirm RLS denies cross-user row access. Follow-up tasks: food data seeding, API routes, @/lib/supabase client file (not visible in diff — confirm it was added separately).",
+  "fallback_text": "PR #13 adds the initial Supabase/PostgreSQL schema for NutriTrack. A single migration file (001_initial_schema.sql) creates tables for profiles, foods, meals, meal_items, daily_logs, goals, and insights with proper foreign keys, indexes, and RLS policies ensuring users see only their own data. A helper trigger keeps updated_at current. The Supabase client is initialized at @/lib/supabase and TypeScript entity types are defined. Seeding, API routes, and UI are deferred to later tasks."
+}
