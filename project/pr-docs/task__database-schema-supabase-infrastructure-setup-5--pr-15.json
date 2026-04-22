@@ -1,0 +1,19 @@
+{
+  "overview": "This PR establishes the full PostgreSQL database schema for NutriTrack within a new migrations file. It creates all core tables (profiles, foods, meals, meal_items, daily_logs, goals, insights), configures Row Level Security policies so users only access their own data, and sets up helper triggers for auto-timestamps and profile creation on new auth users. This forms the foundational data layer all future features will depend on.",
+  "summary_json": {
+    "Tables created": "profiles, foods, meals, meal_items, daily_logs, goals, insights",
+    "RLS": "Row Level Security policies enabled per-table to scope data to authenticated owner",
+    "Helper functions": "update_updated_at trigger, handle_new_user trigger (auto-creates profile on auth.users insert)",
+    "Client setup": "Referenced at @/lib/supabase (not in file diff)",
+    "Out of scope": "Food data seeding, API routes, UI components",
+    "Migration file": "supabase/migrations/001_initial_schema.sql"
+  },
+  "files_changed": [
+    {
+      "path": "supabase/migrations/001_initial_schema.sql",
+      "summary": "Initial schema migration that creates all application tables, indexes, relationships, RLS policies, and helper PL/pgSQL functions for NutriTrack."
+    }
+  ],
+  "extras": "To verify: run migration against a fresh local/staging project, confirm RLS policies block cross-user data access in SQL editor, and check the handle_new_user trigger fires on new auth.users insert. Follow-up tasks: food data seeding migration, API routes, and @/lib/supabase client file (may live in a separate PR).",
+  "fallback_text": "PR #15 adds supabase/migrations/001_initial_schema.sql which defines the complete NutriTrack database: tables for profiles, foods, meals, meal_items, daily_logs, goals, and insights with proper foreign keys and indexes. Row Level Security is configured on all tables so each user can only read/write their own rows. Two helper functions are included — update_updated_at keeps timestamps fresh via trigger, and handle_new_user automatically inserts a profile row whenever a new auth user is created. Food seeding, API routes, and UI are explicitly out of scope for this PR."
+}
