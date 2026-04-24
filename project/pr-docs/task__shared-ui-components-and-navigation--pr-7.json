@@ -1,0 +1,54 @@
+{
+  "overview": "This PR builds the shared UI component library and authenticated app navigation structure. It introduces reusable primitives (Button, Input, Textarea, Select, Card, Badge, Spinner, Label, FormField) plus a utility for class merging. Components are designed for mobile/desktop responsive layouts with validation styling and accessibility attributes.",
+  "summary_json": {
+    "Component variants": "Button: primary, secondary, ghost, danger, outline; Badge: default, success, error, warning, info, green, gray; Card: default, elevated, outlined",
+    "Form components": "Input, Textarea (auto-resize), Select, FormField, Label — all with error/hint/label props and forwardRef support",
+    "Spinner sizes/colors": "xs, sm, md, lg; green, white, gray",
+    "Utility": "src/lib/utils.ts exports cn() for conditional class merging",
+    "Cap note": "Files beyond index 10 were omitted; navigation/layout/modal/toast/skeleton components may not be reflected here"
+  },
+  "files_changed": [
+    {
+      "path": "src/lib/utils.ts",
+      "summary": "Adds cn() helper that filters falsy values and joins class strings, used across all UI components."
+    },
+    {
+      "path": "src/components/ui/Spinner.tsx",
+      "summary": "SVG-based animated loading spinner with configurable size (xs–lg) and color (green/white/gray), aria-labeled for accessibility."
+    },
+    {
+      "path": "src/components/ui/Badge.tsx",
+      "summary": "Pill-shaped badge with 7 color variants and optional leading dot indicator, in sm/md sizes."
+    },
+    {
+      "path": "src/components/ui/Label.tsx",
+      "summary": "Accessible form label with optional required asterisk and htmlFor wiring."
+    },
+    {
+      "path": "src/components/ui/Button.tsx",
+      "summary": "Full-featured button with 5 variants, 3 sizes, loading state (shows Spinner), fullWidth, and left/right icon slots."
+    },
+    {
+      "path": "src/components/ui/Input.tsx",
+      "summary": "Text input with label, error, hint, left/right addon slots, validation styling, and forwardRef support."
+    },
+    {
+      "path": "src/components/ui/Textarea.tsx",
+      "summary": "Textarea with optional auto-resize on content change, error/hint display, and forwardRef support."
+    },
+    {
+      "path": "src/components/ui/Select.tsx",
+      "summary": "Styled native select with option list, placeholder, error/hint, and forwardRef support."
+    },
+    {
+      "path": "src/components/ui/FormField.tsx",
+      "summary": "Layout wrapper that composes Label, error message (role=alert), and hint text around any form control child."
+    },
+    {
+      "path": "src/components/ui/Card.tsx",
+      "summary": "Container card with 3 shadow/border variants, 4 padding sizes, and optional clickable behavior with keyboard support."
+    }
+  ],
+  "extras": "Files beyond index 10 were omitted due to context caps — navigation bar, modal, toast, skeleton, and layout wrapper components are referenced in the PR description but not visible in the diff preview. Review those files manually to confirm full coverage.",
+  "fallback_text": "PR #7 ships the shared UI component library for the app. Added: cn() class utility; Spinner (SVG, 4 sizes, 3 colors); Badge (7 variants, optional dot); Label (required marker); Button (5 variants, loading state, icons); Input and Textarea (forwardRef, validation, addons, auto-resize); Select (native, forwardRef); FormField (label+error+hint wrapper); Card (3 variants, clickable). All components use Tailwind via cn(). Navigation bar, modal, toast, skeleton, and layout wrapper files were omitted from preview due to cap limits and should be reviewed separately."
+}
