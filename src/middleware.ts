@@ -2,36 +2,68 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const protectedPaths = ['/dashboard', '/log', '/profile', '/reports', '/goals'];
-const authPaths = ['/auth'];
+const PROTECTED_ROUTES = ['/dashboard', '/log', '/profile', '/reports', '/goals', '/onboarding'];
+const AUTH_ROUTES = ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+  const supabase = createMiddlewareClient({ req: request, res: response });
 
-  // Refresh session — MUST use the same `res` to persist the cookie
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const { pathname } = req.nextUrl;
+  const pathname = request.nextUrl.pathname;
 
-  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
-  const isAuthPage = authPaths.some((p) => pathname.startsWith(p));
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isApiRoute = pathname.startsWith('/api');
+  const isOnboardingRoute = pathname.startsWith('/onboarding');
 
-  if (isProtected && !session) {
-    const loginUrl = new URL('/auth/login', req.url);
-    loginUrl.searchParams.set('redirect', pathname);
+  // Redirect unauthenticated users to login
+  if (!session && isProtectedRoute) {
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthPage && session) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+  // Redirect authenticated users away from auth pages
+  if (session && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  return res;
+  // Onboarding redirect logic for authenticated users
+  if (session && !isApiRoute && !isOnboardingRoute) {
+    const onboardingCompleted =
+      request.cookies.get('onboarding_completed')?.value === 'true';
+
+    if (!onboardingCompleted && isProtectedRoute) {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
+    }
+  }
+
+  // Prevent completed users from re-visiting onboarding
+  if (session && isOnboardingRoute) {
+    const onboardingCompleted =
+      request.cookies.get('onboarding_completed')?.value === 'true';
+
+    if (onboardingCompleted) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/public).*)'],
+  matcher: [
+    '/dashboard/:path*',
+    '/log/:path*',
+    '/profile/:path*',
+    '/reports/:path*',
+    '/goals/:path*',
+    '/onboarding/:path*',
+    '/onboarding',
+    '/auth/:path*',
+  ],
 };
