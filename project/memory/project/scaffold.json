@@ -45,36 +45,6 @@
       "path": ".env.example",
       "purpose": "environment variables template for Supabase, OpenAI, and auth",
       "isEmpty": false
-    },
-    {
-      "path": "pr-docs/.gitkeep",
-      "purpose": "placeholder for PR documentation",
-      "isEmpty": true
-    },
-    {
-      "path": "memory/.gitkeep",
-      "purpose": "placeholder for memory directory",
-      "isEmpty": true
-    },
-    {
-      "path": "memory/project/.gitkeep",
-      "purpose": "placeholder for project memory",
-      "isEmpty": true
-    },
-    {
-      "path": "memory/task/.gitkeep",
-      "purpose": "placeholder for task memory",
-      "isEmpty": true
-    },
-    {
-      "path": "memory/agent/.gitkeep",
-      "purpose": "placeholder for agent memory",
-      "isEmpty": true
-    },
-    {
-      "path": "memory/context/.gitkeep",
-      "purpose": "placeholder for context memory",
-      "isEmpty": true
     }
   ],
   "libraryExports": [],
@@ -91,30 +61,5 @@
     "migrationsExist": false,
     "tables": []
   },
-  "intentionallyEmpty": [
-    {
-      "file": "pr-docs/.gitkeep",
-      "intendedPurpose": "placeholder for PR documentation"
-    },
-    {
-      "file": "memory/.gitkeep",
-      "intendedPurpose": "placeholder for memory directory"
-    },
-    {
-      "file": "memory/project/.gitkeep",
-      "intendedPurpose": "placeholder for project memory"
-    },
-    {
-      "file": "memory/task/.gitkeep",
-      "intendedPurpose": "placeholder for task memory"
-    },
-    {
-      "file": "memory/agent/.gitkeep",
-      "intendedPurpose": "placeholder for agent memory"
-    },
-    {
-      "file": "memory/context/.gitkeep",
-      "intendedPurpose": "placeholder for context memory"
-    }
-  ]
+  "intentionallyEmpty": []
 }
